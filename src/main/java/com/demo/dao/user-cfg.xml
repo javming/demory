@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.demo.dao.UserDao">
+
+    <resultMap type="com.demo.bean.user.UserInfo" id="userMapper">
+        <id column="id" property="id" />
+        <result property="openId" column="open_id" />
+        <result property="username" column="username" />
+        <result property="password" column="password"/>
+        <result property="realname" column="realname" />
+        <result property="nickname" column="nickname" />
+        <result property="address" column="address" />
+        <result property="telphone" column="telphone" />
+        <result property="email" column="email" />
+        <result property="age" column="age" />
+        <result property="sex" column="sex" />
+        <result property="signTime" column="sign_time" />
+        <result property="role" column="role"/>
+        <result property="isDel" column="is_del"/>
+    </resultMap>
+
+    <insert id="insertUser" parameterType="com.demo.bean.user.UserInfo" useGeneratedKeys="true">
+        INSERT INTO f_user(open_id,username,password,realname,nickname,address,telhpone,email,age,sex,sign_time,role,is_del)
+         VALUES(openId,username,password,realname,nickname,address,telhpone,email,age,sex,signTime,role);
+    </insert>
+
+    <select id="selectByUsername" parameterType="java.lang.String" resultMap="userMapper">
+        SELECT * FROM f_user WHERE username=#{username};
+    </select>
+</mapper>
