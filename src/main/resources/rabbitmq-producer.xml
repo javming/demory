@@ -14,6 +14,7 @@
     <rabbit:admin connection-factory="connectionFactory"/>
     <!-- queue 队列声明-->
     <rabbit:queue id="queue_one" durable="true" auto-delete="false" exclusive="false" name="queue_one"/>
+    <rabbit:queue id="queue_two" durable="true" auto-delete="false" exclusive="false" name="queue_two"/>
     <!--  exchangeName：交换机名字 exchangeType(direct)类型 durable是否持久化 autoDelete不使用时是否自动删除-->
     <rabbit:direct-exchange name="demory-exchange" durable="true" auto-delete="false" id="demory-exchange">
         <!--exchange queue binging key 绑定-->
@@ -21,8 +22,14 @@
             <rabbit:binding queue="queue_one" key="queue_one_key"/>
         </rabbit:bindings>
     </rabbit:direct-exchange>
+    <rabbit:topic-exchange name="topic-exchange" id="topic-exchange" auto-delete="false" durable="true">
+        <rabbit:bindings>
+            <rabbit:binding queue="queue_one" pattern="one.#"/>
+            <rabbit:binding queue="queue_two" pattern="#.two"/>
+        </rabbit:bindings>
+    </rabbit:topic-exchange>
     <bean id="jsonMessageConverter"  class="org.springframework.amqp.support.converter.Jackson2JsonMessageConverter"/>
     <!-- spring template声明-->
-    <rabbit:template id="amqpTemplate" exchange="demory-exchange"
+    <rabbit:template id="amqpTemplate" exchange="topic-exchange"
                      connection-factory="connectionFactory"  message-converter="jsonMessageConverter"/>
 </beans>

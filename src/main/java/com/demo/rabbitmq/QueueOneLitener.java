@@ -13,7 +13,7 @@ public class QueueOneLitener implements MessageListener{
 
     public void onMessage(Message message) {
         try {
-            System.out.println("receive-->"+new String(message.getBody(),"utf-8"));
+            System.out.println("receive--one-->"+new String(message.getBody(),"utf-8"));
         } catch (UnsupportedEncodingException e) {
             System.out.println(e.getMessage());
         }

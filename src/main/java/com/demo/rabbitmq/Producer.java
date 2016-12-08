@@ -18,7 +18,7 @@ public class Producer {
 
     public void sendDataToCrQueue(Object obj) {
         System.out.println("amqpTemplate:  "+amqpTemplate);
-        amqpTemplate.convertAndSend("queue_one_key", obj);
+        amqpTemplate.convertAndSend("one.two", obj);
         System.out.println("message sent success");
     }
 }
