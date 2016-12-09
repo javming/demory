@@ -1,10 +1,7 @@
 package com.demo.test;
 
 import com.demo.bean.Book;
-import com.demo.bean.ResultBean;
-import com.demo.bean.SystemStatus;
 import com.demo.util.MD5;
-import net.sf.json.JSONObject;
 import org.apache.commons.lang.RandomStringUtils;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -118,10 +115,9 @@ public class ITest {
     }
     @Test
     public void testJsonObject(){
-        ResultBean result = new ResultBean();
-        result.setFailMsg(SystemStatus.BAD_REQUEST);
-        JSONObject jsonObject = JSONObject.fromObject(result);
-        System.out.println(jsonObject);
+        long a = 214748364L;
+        int b = (int)a;
+        System.out.println(b);
     }
 
 }
