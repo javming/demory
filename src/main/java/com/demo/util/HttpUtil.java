@@ -1,152 +1,193 @@
 package com.demo.util;
 
+import com.alibaba.fastjson.JSON;
+import com.demo.bean.ResultBean;
+import com.demo.bean.SystemStatus;
+import com.demo.httpclient.IdleConnectionMonitorThread;
 import org.apache.http.HttpEntity;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.client.methods.*;
+import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
+import java.nio.charset.Charset;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
  * @AUTHOR zhaoming@eduspace
- * @CREATE 2016-11-28-13:42
+ * @CREATE 2017-01-23-10:25
  */
 public class HttpUtil {
-    private static PoolingHttpClientConnectionManager cm;
-    private static String EMPTY_STR = "";
-    private static String UTF_8 = "UTF-8";
-
-    private static void init() {
-        if (cm == null) {
-            cm = new PoolingHttpClientConnectionManager();
-            cm.setMaxTotal(50);// 整个连接池最大连接数
-            cm.setDefaultMaxPerRoute(5);// 每路由最大连接数，默认值是2
-        }
-    }
+    private final static int MAX_TOTAL_CONNECTIONS = Config.getInt("http.maxtotal");
+    private final static int MAX_ROUTE_CONNECTIONS = Config.getInt("http.defaultmaxperroute");
+    private final static String APPLICATION_JSON = "application/json";
+    private static final String CHARSET="UTF-8";
+    private static final Logger log = LoggerFactory.getLogger(HttpUtil.class);
+    private static CloseableHttpClient httpclient = null;
+    private static IdleConnectionMonitorThread scanThread = null;
 
     /**
-     * 通过连接池获取HttpClient
-     *
-     * @return
+     * 初始化client对象.
      */
-    private static CloseableHttpClient getHttpClient() {
-        init();
-        return HttpClients.custom().setConnectionManager(cm).build();
+    static {
+        // 连接池设置
+        PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
+        cm.setMaxTotal(MAX_TOTAL_CONNECTIONS); // 最大连接数
+        cm.setDefaultMaxPerRoute(MAX_ROUTE_CONNECTIONS); // 每个路由的最大连接数
+        // 创建client对象
+        httpclient = HttpClients.custom().setConnectionManager(cm).build();
+        // 扫描无效连接的线程
+        scanThread = new IdleConnectionMonitorThread(cm);
+        scanThread.start();
+        log.info("httpclient-pool init success!");
     }
-
     /**
-     *
-     * @param url
-     * @return
+     * 关闭连接池.
      */
-    public static String httpGetRequest(String url) {
-        HttpGet httpGet = new HttpGet(url);
-        return getResult(httpGet);
-    }
-
-    public static String httpGetRequest(String url, Map<String, Object> params) throws URISyntaxException {
-        URIBuilder ub = new URIBuilder();
-        ub.setPath(url);
-
-        ArrayList<NameValuePair> pairs = covertParams2NVPS(params);
-        ub.setParameters(pairs);
-
-        HttpGet httpGet = new HttpGet(ub.build());
-        return getResult(httpGet);
-    }
-
-    public static String httpGetRequest(String url, Map<String, Object> headers, Map<String, Object> params)
-            throws URISyntaxException {
-        URIBuilder ub = new URIBuilder();
-        ub.setPath(url);
-
-        ArrayList<NameValuePair> pairs = covertParams2NVPS(params);
-        ub.setParameters(pairs);
-
-        HttpGet httpGet = new HttpGet(ub.build());
-        for (Map.Entry<String, Object> param : headers.entrySet()) {
-            httpGet.addHeader(param.getKey(), String.valueOf(param.getValue()));
-        }
-        return getResult(httpGet);
-    }
-
-    public static String httpPostRequest(String url) {
-        HttpPost httpPost = new HttpPost(url);
-        return getResult(httpPost);
-    }
-
-    public static String httpPostRequest(String url, Map<String, Object> params) throws UnsupportedEncodingException {
-        HttpPost httpPost = new HttpPost(url);
-        ArrayList<NameValuePair> pairs = covertParams2NVPS(params);
-        httpPost.setEntity(new UrlEncodedFormEntity(pairs, UTF_8));
-        return getResult(httpPost);
-    }
-
-    public static String httpPostRequest(String url, Map<String, Object> headers, Map<String, Object> params)
-            throws UnsupportedEncodingException {
-        HttpPost httpPost = new HttpPost(url);
-
-        for (Map.Entry<String, Object> param : headers.entrySet()) {
-            httpPost.addHeader(param.getKey(), String.valueOf(param.getValue()));
-        }
-
-        ArrayList<NameValuePair> pairs = covertParams2NVPS(params);
-        httpPost.setEntity(new UrlEncodedFormEntity(pairs, UTF_8));
-
-        return getResult(httpPost);
-    }
-
-    private static ArrayList<NameValuePair> covertParams2NVPS(Map<String, Object> params) {
-        ArrayList<NameValuePair> pairs = new ArrayList<NameValuePair>();
-        for (Map.Entry<String, Object> param : params.entrySet()) {
-            pairs.add(new BasicNameValuePair(param.getKey(), String.valueOf(param.getValue())));
-        }
-
-        return pairs;
-    }
-
-    /**
-     * 处理Http请求
-     *
-     * @param request
-     * @return
-     */
-    private static String getResult(HttpRequestBase request) {
-        // CloseableHttpClient httpClient = HttpClients.createDefault();
-        CloseableHttpClient httpClient = getHttpClient();
-        try {
-            CloseableHttpResponse response = httpClient.execute(request);
-            // response.getStatusLine().getStatusCode();
-            HttpEntity entity = response.getEntity();
-            if (entity != null) {
-                // long len = entity.getContentLength();// -1 表示长度未知
-                String result = EntityUtils.toString(entity);
-                response.close();
-                // httpClient.close();
-                return result;
+    public static void close() {
+        if (httpclient != null) {
+            try {
+                httpclient.close();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        } catch (ClientProtocolException e) {
-            e.printStackTrace();
+        }
+        if (scanThread != null) {
+            scanThread.shutdown();
+        }
+    }
+
+    /** content-type:application/json */
+    public static String httpRest(String server,String uri,Map<String, Object> headers,Object body,String method){
+        return httpRest(server,uri,headers,body,method,APPLICATION_JSON);
+    }
+
+    public static String httpRest(String server,String uri,Map<String, Object> headers,Object body,String method,
+                                  String contentType){
+        String url = server+uri;
+        // 参数检查
+        if (httpclient == null) {
+            throw new RuntimeException("httpclient not init.");
+        }
+        if (StringUtil.isEmpty(url)) {
+            throw new RuntimeException("url is blank.");
+        }
+        log.info(" 请求其它系统路径：===>>\n __["+url+"]"+
+                (headers==null?"":("\n __[headParams]:"+JSON.toJSONString(headers)))+
+                (body==null?"": ("\n __[bodyParams]:"+ JSON.toJSONString(body))));
+        String res = null;
+        switch (method){
+            case "GET":
+                res = httpGet(url,headers);break;
+            case "POST":
+                res = httpPost(url,headers,body,contentType);break;
+            case "PUT":
+                res = httpPut(url,headers,body,contentType);break;
+            case "DELETE":
+                res = httpDelete(url,headers);break;
+            default:
+                log.error("The request-method is not defined");
+                throw new RuntimeException("The request-method is not defined");
+        }
+        log.info("其他系统返回：<<===\n __"+res);
+        return res;
+    }
+
+    /**
+     * 添加头信息
+     */
+    private static HttpUriRequest setHeaders(HttpUriRequest request, Map<String, Object> headers){
+        Iterator i = headers.entrySet().iterator();
+        while (i.hasNext()) {
+            Map.Entry en = (Map.Entry) i.next();
+            request.setHeader((String) en.getKey(), (String) en.getValue());
+        }
+        return request;
+    }
+
+    private static String execute(HttpUriRequest request){
+        CloseableHttpResponse response = null;
+        try {
+            response = httpclient.execute(request, HttpClientContext.create());
+            HttpEntity entity = response.getEntity();
+            return EntityUtils.toString(entity, CHARSET);
         } catch (IOException e) {
             e.printStackTrace();
+            return JSON.toJSONString(ResultBean.getFailResult(SystemStatus.SERVER_ERROR));
         } finally {
-
+            if (response != null) {
+                try {
+                    response.close();
+                } catch (IOException e) {
+                    log.error("e:"+e.getMessage());
+                }
+            }
         }
-
-        return EMPTY_STR;
     }
+
+    public static String httpGet(String url,Map<String, Object> headers){
+        HttpGet httpGet = new HttpGet(url);
+        if(headers!=null&&!headers.isEmpty()){
+            httpGet = (HttpGet) setHeaders(httpGet,headers);
+        }
+        String res = execute(httpGet);
+        httpGet.releaseConnection();
+        return res;
+    }
+
+    public static String httpPost(String url,Map<String, Object> headers,Object body,String contentType){
+        String entity = null;
+        if (body != null) entity = JSON.toJSONString(body);
+        return httpPost(url,headers,entity,contentType);
+    }
+    public static String httpPost(String url,Map<String, Object> headers,String entity,String contentType){
+        HttpPost httpPost = new HttpPost(url);
+        if(headers!=null&&!headers.isEmpty()){
+            httpPost = (HttpPost) setHeaders(httpPost,headers);
+        }
+        // 设置内容
+        if (entity!=null){
+            ContentType type = ContentType.create(contentType, Charset.forName(CHARSET));
+            StringEntity stringEntity = new StringEntity(entity,type);
+            httpPost.setEntity(stringEntity);
+        }
+        String res = execute(httpPost);
+        httpPost.releaseConnection();
+        return res;
+    }
+
+    public static String httpPut(String url,Map<String, Object> headers,Object body,String contentType){
+        HttpPut httpPut = new HttpPut(url);
+        if(headers!=null&&!headers.isEmpty()){
+            httpPut = (HttpPut) setHeaders(httpPut,headers);
+        }
+        // 设置内容
+        if (body!=null){
+            ContentType type = ContentType.create(contentType,Charset.forName(CHARSET));
+            StringEntity entity = new StringEntity(JSON.toJSONString(body),type);
+            httpPut.setEntity(entity);
+        }
+        String res = execute(httpPut);
+        httpPut.releaseConnection();
+        return res;
+    }
+
+    public static String httpDelete(String url,Map<String, Object> headers){
+        HttpDelete httpDelete = new HttpDelete(url);
+        if(headers!=null&&!headers.isEmpty()){
+            httpDelete = (HttpDelete) setHeaders(httpDelete,headers);
+        }
+        String res = execute(httpDelete);
+        httpDelete.releaseConnection();
+        return res;
+    }
+
 }

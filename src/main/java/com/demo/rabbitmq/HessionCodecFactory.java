@@ -1,10 +1,5 @@
 package com.demo.rabbitmq;
 
-import com.alibaba.com.caucho.hessian.io.HessianInput;
-import com.alibaba.com.caucho.hessian.io.HessianOutput;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

@@ -10,11 +10,11 @@ import java.util.UUID;
  * @CREATE 2016-10-28-9:47
  */
 public class ResultBean implements Serializable{
-    public String requestId = UUID.randomUUID().toString().replace("-", "");
-    public String httpCode = "";
-    public int code;
-    public String message;
-    public Object result = "";
+    private String requestId = UUID.randomUUID().toString().replace("-", "");
+    private String httpCode = "200";
+    private int code;
+    private String message;
+    private Object result = "";
 
     public String getRequestId() {
         return requestId;
@@ -55,10 +55,10 @@ public class ResultBean implements Serializable{
     public void setResult(Object result) {
         this.result = result;
     }
+
     /**
      *
-     * @param status
-     *            异常返回枚举类型
+     * @param status  异常返回枚举类型
      */
     public void setFailMsg(SystemStatus status) {
         setCode(status.getCode());
@@ -67,23 +67,42 @@ public class ResultBean implements Serializable{
 
     /**
      *
-     * @param code
-     * @param str
-     *            异常返回枚举类型
+     * @param
+     *
      */
-    public void setFailMsg(int code, String str) {
+    public void setFailMsg(int code,String str) {
         setCode(code);
         setMessage(str);
     }
 
     /**
      *
-     * @param result
-     *            成功返回数据
+     * @param result  成功返回数据
      */
     public void setSucResult(Object result) {
         setCode(SystemStatus.OK.getCode());
         setMessage(SystemStatus.OK.getStr());
         setResult(result);
+    }
+
+    public static ResultBean newInstance(){
+        return new ResultBean();
+    }
+
+    private static ResultBean newInstance(int code, String message, Object result){
+        ResultBean resultBean = new ResultBean();
+        resultBean.setCode(code);
+        resultBean.setMessage(message);
+        resultBean.setResult(result);
+        return resultBean;
+    }
+    public static ResultBean getSucResult(Object result){
+        return newInstance(SystemStatus.OK.getCode(),SystemStatus.OK.getStr(),result);
+    }
+    public static ResultBean getFailResult(int code ,String message){
+        return newInstance(code,message,"");
+    }
+    public static ResultBean getFailResult(SystemStatus status){
+        return newInstance(status.getCode(),status.getStr(),"");
     }
 }

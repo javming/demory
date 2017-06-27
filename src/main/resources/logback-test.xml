@@ -30,10 +30,19 @@
 			<MaxFileSize>10MB</MaxFileSize>
 		</triggeringPolicy>
 	</appender>
+
+	<appender name="SOCKET" class="ch.qos.logback.classic.net.SocketAppender">
+		<remoteHost>192.168.0.101</remoteHost>
+		<port>8888</port>
+		<reconnectionDelay>10000</reconnectionDelay>
+		<includeCallerData>true</includeCallerData>
+	</appender>
+
 	<!-- 日志输出级别 -->
 	<root level="INFO">
 		<appender-ref ref="STDOUT" />
 		<appender-ref ref="FILE" />
+		<appender-ref ref="SOCKET"/>
 	</root>
 
 </configuration>

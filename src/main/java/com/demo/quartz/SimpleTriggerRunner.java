@@ -1,7 +1,7 @@
 package com.demo.quartz;
 
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
 
